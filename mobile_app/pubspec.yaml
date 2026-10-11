@@ -1,5 +1,5 @@
 name: aquarocket_mobile
-description: "AquaRocket Pure-Rust 6-DOF Mobile Mission Control"
+description: "AquaRocket Pure-Rust 6-DOF CAD & Mission Control"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   ffi: ^2.1.2
+  flutter_cube: ^0.1.1
 
 dev_dependencies:
   flutter_test:
@@ -18,3 +19,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/models/
