@@ -1,0 +1,41 @@
+name: AquaRocket Cloud Heavy Engine CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  cloud_build_and_simulate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Install Rust Toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+        targets: x86_64-unknown-linux-gnu, aarch64-linux-android
+
+    - name: Rust Cache (Lightning Fast Builds)
+      uses: Swatinem/rust-cache@v2
+
+    - name: Run Physics & CAD Verification
+      run: |
+        cargo test --verbose
+        cargo run --release
+
+    - name: Package Generated 3D Models & Assets
+      run: |
+        mkdir -p build_output
+        cp target/release/aquarocket build_output/
+        cp *.obj *.mtl build_output/ 2>/dev/null || true
+
+    - name: Upload Aerospace Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: AquaRocket-Cloud-Binaries
+        path: build_output/
