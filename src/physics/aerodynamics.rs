@@ -1,6 +1,7 @@
 pub struct NoseCone {
     pub length: f32,
-    pub _base_radius: f32,
+    #[allow(dead_code)]
+    pub base_radius: f32,
 }
 
 impl NoseCone {
