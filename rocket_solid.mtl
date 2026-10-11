@@ -1,0 +1,5 @@
+# AquaRocket Carbon Composite Material
+newmtl RocketSkin
+Kd 0.15 0.18 0.22
+Ks 0.5 0.5 0.5
+Ns 60.0

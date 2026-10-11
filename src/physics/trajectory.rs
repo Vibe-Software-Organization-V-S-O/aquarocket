@@ -39,14 +39,14 @@ impl RocketVehicle {
     }
 
     pub fn simulate(&mut self, dt: f32) -> FlightTelemetry {
-        let mut t = 0.0;
-        let mut alt = 0.0;
-        let mut v = 0.0;
+        let mut t: f32 = 0.0;
+        let mut alt: f32 = 0.0;
+        let mut v: f32 = 0.0;
 
-        let mut max_alt = 0.0;
-        let mut max_vel = 0.0;
-        let mut burnout_alt = 0.0;
-        let mut apogee_time = 0.0;
+        let mut max_alt: f32 = 0.0;
+        let mut max_vel: f32 = 0.0;
+        let mut burnout_alt: f32 = 0.0;
+        let mut apogee_time: f32 = 0.0;
         let mut apogee_reached = false;
 
         while alt >= 0.0 || t == 0.0 {
@@ -54,14 +54,14 @@ impl RocketVehicle {
                 burnout_alt = alt;
             }
 
-            // অ্যাপোজি ডিটেকশন ও প্যারাসুট ডিপ্লয়মেন্ট
+            // অ্যাপোজি সনাক্তকরণ ও প্যারাসুট খোলা
             if !apogee_reached && v <= 0.0 && t > self.motor.burn_time {
                 apogee_reached = true;
                 apogee_time = t;
                 self.parachute.deployed = true;
             }
 
-            // RK4 স্টেপ
+            // RK4 ইন্টিগ্রেশন
             let is_chute = self.parachute.deployed;
             let a1 = self.acceleration(t, alt, v, is_chute);
             let v1 = v;
@@ -86,9 +86,8 @@ impl RocketVehicle {
                 max_vel = v;
             }
 
-            // ল্যান্ডিং চেকিং
+            // গ্রাউন্ডে পৌঁছালে লুপ শেষ
             if apogee_reached && alt <= 0.0 {
-                alt = 0.0;
                 break;
             }
         }
