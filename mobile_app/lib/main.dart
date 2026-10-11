@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_cube/flutter_cube.dart';
+import 'package:path_provider/path_provider.dart';
 import 'core/services/simulation_service.dart';
 
 void main() {
@@ -40,8 +42,16 @@ class _RocketStudioDashboardState extends State<RocketStudioDashboard> {
   late Scene _scene;
   Object? _rocketObject;
 
-  // প্যারামেট্রিক ভ্যারিয়েবলস
-  double _radius = 0.025;
+  // প্যারামেট্রিক জিওমেট্রি ভেরিয়েবল
+  double _caliber = 0.050;     // 50 mm diameter
+  double _noseLength = 0.15;   // 150 mm
+  double _bodyLength = 0.60;   // 600 mm
+  double _finSpan = 0.05;      // 50 mm
+  double _finRoot = 0.08;      // 80 mm
+  double _finTip = 0.04;       // 40 mm
+  double _finSweep = 0.04;     // 40 mm
+
+  // মোটর ভেরিয়েবল
   double _s1Impulse = 25.0;
   double _s2Impulse = 15.0;
 
@@ -53,7 +63,7 @@ class _RocketStudioDashboardState extends State<RocketStudioDashboard> {
 
   void _runSimulation() {
     final res = _service.simulate(
-      radius: _radius,
+      radius: _caliber * 0.5,
       dragCoeff: 0.42,
       s1DryMass: 0.080,
       s1BurnTime: 1.2,
@@ -72,18 +82,42 @@ class _RocketStudioDashboardState extends State<RocketStudioDashboard> {
     });
   }
 
-  void _onSceneCreated(Scene scene) {
-    _scene = scene;
-    scene.camera.position.setValues(0, 0, 4.5);
-    scene.camera.target.setValues(0, 0, 0);
+  Future<void> _update3DMesh() async {
+    final dir = await getTemporaryDirectory();
+    final meshPath = '${dir.path}/live_rocket.obj';
+
+    _service.generateMesh(
+      path: meshPath,
+      caliber: _caliber,
+      noseLen: _noseLength,
+      bodyLen: _bodyLength,
+      finRoot: _finRoot,
+      finTip: _finTip,
+      finSpan: _finSpan,
+      finSweep: _finSweep,
+      finCount: 4,
+    );
+
+    if (_rocketObject != null) {
+      _scene.world.remove(_rocketObject!);
+    }
 
     _rocketObject = Object(
-      fileName: 'assets/models/rocket.obj',
-      isAsset: true,
-      scale: Vector3(1.2, 1.2, 1.2),
+      fileName: meshPath,
+      isAsset: false,
+      scale: Vector3(3.0, 3.0, 3.0),
       lighting: true,
     );
-    scene.world.add(_rocketObject!);
+    _scene.world.add(_rocketObject!);
+    _scene.update();
+    _runSimulation();
+  }
+
+  void _onSceneCreated(Scene scene) {
+    _scene = scene;
+    scene.camera.position.setValues(0, 0, 3.5);
+    scene.camera.target.setValues(0, 0, 0);
+    _update3DMesh();
   }
 
   @override
@@ -107,7 +141,6 @@ class _RocketStudioDashboardState extends State<RocketStudioDashboard> {
       ),
       body: Column(
         children: [
-          // ১. ৩৬০° লাইভ ৩D ভিউপোর্ট
           Expanded(
             flex: 4,
             child: Container(
@@ -144,7 +177,7 @@ class _RocketStudioDashboardState extends State<RocketStudioDashboard> {
                             Icon(Icons.threed_rotation, color: aquaColor, size: 16),
                             SizedBox(width: 6),
                             Text(
-                              "INTERACTIVE 3D CAD",
+                              "LIVE PARAMETRIC 3D CAD",
                               style: TextStyle(color: aquaColor, fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                           ],
@@ -156,8 +189,6 @@ class _RocketStudioDashboardState extends State<RocketStudioDashboard> {
               ),
             ),
           ),
-
-          // ২. টেলিমেট্রি কার্ড ও অ্যারোস্পেস কন্ট্রোলস
           Expanded(
             flex: 5,
             child: SingleChildScrollView(
@@ -177,7 +208,7 @@ class _RocketStudioDashboardState extends State<RocketStudioDashboard> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text("TELEMETRY", style: TextStyle(color: aquaColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                              const Text("FLIGHT METRICS", style: TextStyle(color: aquaColor, fontWeight: FontWeight.bold, fontSize: 12)),
                               Text("APOGEE: ${_result!.apogee.toStringAsFixed(1)} M", style: const TextStyle(color: aquaColor, fontWeight: FontWeight.bold, fontSize: 13)),
                             ],
                           ),
@@ -195,8 +226,6 @@ class _RocketStudioDashboardState extends State<RocketStudioDashboard> {
                     ),
                     const SizedBox(height: 12),
                   ],
-
-                  // প্যারামেট্রিক ডিজাইনার স্লাইডার
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -207,12 +236,27 @@ class _RocketStudioDashboardState extends State<RocketStudioDashboard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("PARAMETRIC AIRFRAME CONFIG", style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
+                        const Text("PARAMETRIC AIRFRAME SHAPE", style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 10),
-                        _sliderTile("Caliber (Diameter)", "${(_radius * 2000).toStringAsFixed(1)} mm", _radius, 0.015, 0.050, (v) {
-                          setState(() => _radius = v);
-                          _runSimulation();
+                        _sliderTile("Caliber (Diameter)", "${(_caliber * 1000).toStringAsFixed(1)} mm", _caliber, 0.020, 0.080, (v) {
+                          setState(() => _caliber = v);
+                          _update3DMesh();
                         }),
+                        _sliderTile("Nose Cone Length", "${(_noseLength * 1000).toStringAsFixed(1)} mm", _noseLength, 0.05, 0.30, (v) {
+                          setState(() => _noseLength = v);
+                          _update3DMesh();
+                        }),
+                        _sliderTile("Body Tube Length", "${(_bodyLength * 1000).toStringAsFixed(1)} mm", _bodyLength, 0.30, 1.20, (v) {
+                          setState(() => _bodyLength = v);
+                          _update3DMesh();
+                        }),
+                        _sliderTile("Fin Span", "${(_finSpan * 1000).toStringAsFixed(1)} mm", _finSpan, 0.02, 0.12, (v) {
+                          setState(() => _finSpan = v);
+                          _update3DMesh();
+                        }),
+                        const Divider(color: Colors.white10, height: 20),
+                        const Text("PROPULSION IMPULSE", style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 10),
                         _sliderTile("Booster Impulse", "${_s1Impulse.toStringAsFixed(1)} N·s", _s1Impulse, 10.0, 60.0, (v) {
                           setState(() => _s1Impulse = v);
                           _runSimulation();

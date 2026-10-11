@@ -27,6 +27,30 @@ class SimulationResult {
 class AquaRocketService {
   final AquaRocketNativeBridge _bridge = AquaRocketNativeBridge();
 
+  bool generateMesh({
+    required String path,
+    required double caliber,
+    required double noseLen,
+    required double bodyLen,
+    required double finRoot,
+    required double finTip,
+    required double finSpan,
+    required double finSweep,
+    required int finCount,
+  }) {
+    return _bridge.generateCadMesh(
+      path,
+      caliber,
+      noseLen,
+      bodyLen,
+      finRoot,
+      finTip,
+      finSpan,
+      finSweep,
+      finCount,
+    );
+  }
+
   SimulationResult simulate({
     required double radius,
     required double dragCoeff,

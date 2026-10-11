@@ -1,5 +1,6 @@
 import 'dart:ffi';
 import 'dart:io';
+import 'package:ffi/ffi.dart';
 
 final class CRocketConfig extends Struct {
   @Float()
@@ -68,9 +69,34 @@ final class CRocketTelemetry extends Struct {
 typedef SimulateFlightC = CRocketTelemetry Function(CRocketConfig config);
 typedef SimulateFlightDart = CRocketTelemetry Function(CRocketConfig config);
 
+typedef GenerateMeshC = Bool Function(
+  Pointer<Utf8> outputPath,
+  Float caliber,
+  Float noseLen,
+  Float bodyLen,
+  Float finRoot,
+  Float finTip,
+  Float finSpan,
+  Float finSweep,
+  Uint32 finCount,
+);
+
+typedef GenerateMeshDart = bool Function(
+  Pointer<Utf8> outputPath,
+  double caliber,
+  double noseLen,
+  double bodyLen,
+  double finRoot,
+  double finTip,
+  double finSpan,
+  double finSweep,
+  int finCount,
+);
+
 class AquaRocketNativeBridge {
   late final DynamicLibrary _lib;
   late final SimulateFlightDart _simulateFlight;
+  late final GenerateMeshDart _generateMesh;
 
   AquaRocketNativeBridge() {
     _lib = Platform.isAndroid
@@ -82,9 +108,40 @@ class AquaRocketNativeBridge {
     _simulateFlight = _lib
         .lookup<NativeFunction<SimulateFlightC>>('aquarocket_simulate_flight')
         .asFunction<SimulateFlightDart>();
+
+    _generateMesh = _lib
+        .lookup<NativeFunction<GenerateMeshC>>('aquarocket_generate_cad_mesh')
+        .asFunction<GenerateMeshDart>();
   }
 
   CRocketTelemetry runSimulation(CRocketConfig config) {
     return _simulateFlight(config);
+  }
+
+  bool generateCadMesh(
+    String path,
+    double caliber,
+    double noseLen,
+    double bodyLen,
+    double finRoot,
+    double finTip,
+    double finSpan,
+    double finSweep,
+    int finCount,
+  ) {
+    final pathPtr = path.toNativeUtf8();
+    final res = _generateMesh(
+      pathPtr,
+      caliber,
+      noseLen,
+      bodyLen,
+      finRoot,
+      finTip,
+      finSpan,
+      finSweep,
+      finCount,
+    );
+    calloc.free(pathPtr);
+    return res;
   }
 }
