@@ -1,0 +1,65 @@
+name: AquaRocket Android APK Cloud Build
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build_rust_and_apk:
+    name: Cross-Compile Rust C-ABI & Build Flutter APK
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Setup Java Environment (JDK 17)
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Setup Android NDK
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: r26d
+        add-to-path: true
+
+    - name: Setup Rust & Android Target Toolchains
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+        targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android
+
+    - name: Install cargo-ndk
+      run: cargo install cargo-ndk
+
+    - name: Cross-Compile libaquarocket.so for Android
+      run: |
+        cargo ndk -t aarch64-linux-android -t armv7-linux-androideabi -t x86_64-linux-android -o mobile_app/android/app/src/main/jniLibs build --release
+
+    - name: Setup Flutter SDK
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
+        cache: true
+
+    - name: Install Flutter Dependencies & Setup Android Skeleton
+      working-directory: mobile_app
+      run: |
+        # অ্যান্ড্রয়েড স্কেলিটন না থাকলে তৈরি করে নেওয়া
+        if [ ! -f "android/build.gradle" ]; then
+          flutter create --platforms=android .
+        fi
+        flutter pub get
+
+    - name: Build Android Release APK
+      working-directory: mobile_app
+      run: flutter build apk --release --split-per-abi
+
+    - name: Upload Universal & Architecture APKs
+      uses: actions/upload-artifact@v4
+      with:
+        name: AquaRocket-Android-APKs
+        path: mobile_app/build/app/outputs/flutter-apk/*.apk
